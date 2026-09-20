@@ -5,6 +5,7 @@ const cors = require("cors");
 
 const authRoutes = require("./routes/auth");
 const articleRoutes = require("./routes/articles");
+const jobRoutes = require("./routes/jobs");
 
 const app = express();
 
@@ -20,6 +21,7 @@ app.get("/api/health", (req, res) => {
 
 app.use("/api/auth", authRoutes);
 app.use("/api/articles", articleRoutes);
+app.use("/api/jobs", jobRoutes);
 
 // Fallback for unknown API routes
 app.use("/api", (req, res) => {

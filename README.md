@@ -79,6 +79,72 @@ a bug.
    all unknown paths to `index.html` (Cloudflare Pages and Vercel both do
    this automatically for Vite projects by default).
 
+## The Careers page is a job board, not articles
+The `/career` page now shows real job listings instead of articles — each
+listing links directly to the hiring company's own careers page, never a
+third-party job board. Manage listings from **Admin → Jobs** (a separate tab
+from Articles). The seed script adds two listings for `Example Co`, both
+saved as **drafts** and clearly labeled `[DEMO LISTING]` — replace or delete
+them with real postings (and each posting's own real application link)
+before treating this as live. The 3 original career-advice articles (resume
+tips, salary negotiation, remote jobs) still exist and are viewable by their
+direct article link, they're just no longer listed on the Careers hub page.
+
+## Daily article automation (optional)
+A script that picks the next topic from a rotating evergreen list
+(`backend/scripts/topics.js`), asks Google's free Gemini API to write a full
+article for it, and saves it as a **draft** — it never goes live until you
+review and publish it yourself from Admin → Articles.
+
+**Cost:** this uses Gemini's free tier (Google AI Studio) — no credit card
+required, no billing set up. Free tiers do have daily rate limits, but
+running this once a day is nowhere near them.
+
+### One-time setup
+1. Get a free key at https://aistudio.google.com/app/apikey (sign in with
+   any Google account, accept the terms, click "Create API key") and add it
+   to `backend/.env` as `GEMINI_API_KEY`.
+2. Make sure `API_URL`, `SEED_ADMIN_EMAIL`, and `SEED_ADMIN_PASSWORD` are
+   also set in `backend/.env` (same admin login created by `seed.js`).
+3. Test it manually first, with your backend already running:
+   ```
+   cd backend
+   npm run generate:article
+   ```
+   Check Admin → Articles for a new draft. Read it before scheduling
+   anything — AI-written drafts should always get a human pass for accuracy
+   and tone before publishing.
+
+### Scheduling it on your own machine (macOS/Linux)
+Edit your crontab:
+```
+crontab -e
+```
+Add a line to run it once a day at 7 AM (adjust the path to match where you
+unzipped this project):
+```
+0 7 * * * cd /full/path/to/backend && /usr/bin/node scripts/generate-daily-article.js >> automation.log 2>&1
+```
+Your backend (`npm start`) needs to actually be running at that time for
+this to work, since the script calls your own API.
+
+### Scheduling it on Windows
+Use Task Scheduler → Create Basic Task → set a daily trigger → Action:
+"Start a program" → Program: `node`, Arguments:
+`scripts/generate-daily-article.js`, "Start in": your `backend` folder.
+
+### Notes
+- The rotation position is stored in `backend/scripts/state.json` (created
+  automatically, not committed to git) so each run picks the next topic
+  rather than repeating one.
+- Cover images are intentionally left blank — the site's existing generated
+  category illustration shows instead, since no real-photo API is wired up.
+- Add, remove, or reorder topics anytime in `backend/scripts/topics.js`.
+- Google's free-tier model names occasionally change. If `generate:article`
+  ever fails with a "model not found" error, check
+  https://aistudio.google.com for the current free model name and update
+  `GEMINI_MODEL` in `.env`.
+
 ## Before applying for AdSense
 - Replace the placeholder Privacy Policy text (`frontend/src/pages/Privacy.jsx`)
   with one generated for your setup (AdSense gives you a free generator once
