@@ -5,7 +5,10 @@ import { CATEGORIES, formatDate } from "../categories";
 import AdSlot from "../components/AdSlot";
 import CoverImage from "../components/CoverImage";
 import Reveal from "../components/Reveal";
+import Pagination from "../components/Pagination";
 import NotFound from "./NotFound";
+
+const PAGE_SIZE = 8;
 
 const SORTS = {
   newest: { label: "Newest first", fn: (a, b) => new Date(b.date) - new Date(a.date) },
@@ -28,6 +31,7 @@ export default function Category() {
   const [sort, setSort] = useState("newest");
   const [year, setYear] = useState("");
   const [readLength, setReadLength] = useState(""); // "", "quick", "long"
+  const [page, setPage] = useState(1);
 
   useEffect(() => {
     setLoading(true);
@@ -62,6 +66,11 @@ export default function Category() {
     list.sort(SORTS[sort].fn);
     return list;
   }, [articles, search, year, readLength, sort]);
+
+  useEffect(() => setPage(1), [search, year, readLength, sort, category]);
+
+  const totalPages = Math.max(1, Math.ceil(filtered.length / PAGE_SIZE));
+  const visible = filtered.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE);
 
   const meta = CATEGORIES[category];
   if (!meta) return <NotFound />;
@@ -159,7 +168,7 @@ export default function Category() {
               {filtered.length} article{filtered.length !== 1 ? "s" : ""}
             </p>
             <div className="row g-4 reveal-group">
-              {filtered.map((a) => (
+              {visible.map((a) => (
                 <div className="col-md-6" key={a._id}>
                   <Reveal>
                     <Link to={`/${a.category}/${a.slug}`} className="text-decoration-none text-dark">
@@ -181,6 +190,7 @@ export default function Category() {
                 </div>
               ))}
             </div>
+            <Pagination page={page} totalPages={totalPages} onChange={setPage} />
           </>
         )}
 

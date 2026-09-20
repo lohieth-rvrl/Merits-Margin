@@ -26,6 +26,17 @@ router.get("/", async (req, res) => {
   }
 });
 
+// POST /api/jobs/:id/click -> increments the apply-click counter (public,
+// fired when a visitor clicks "Apply" -- fire-and-forget, no auth needed)
+router.post("/:id/click", async (req, res) => {
+  try {
+    await Job.findByIdAndUpdate(req.params.id, { $inc: { clicks: 1 } });
+    res.json({ ok: true });
+  } catch (err) {
+    res.status(500).json({ error: "Failed to record click." });
+  }
+});
+
 // ---------- ADMIN-ONLY ROUTES ----------
 
 // GET /api/jobs/all -> every listing including drafts, for the dashboard

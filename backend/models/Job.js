@@ -32,6 +32,7 @@ const JobSchema = new mongoose.Schema(
     description: { type: String, default: "" },
     postedDate: { type: Date, required: true, default: Date.now },
     status: { type: String, enum: ["draft", "published"], default: "published" },
+    clicks: { type: Number, default: 0 },
   },
   { timestamps: true }
 );

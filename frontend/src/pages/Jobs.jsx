@@ -3,8 +3,10 @@ import { api } from "../api";
 import { formatDate } from "../categories";
 import Reveal from "../components/Reveal";
 import AdSlot from "../components/AdSlot";
+import Pagination from "../components/Pagination";
 
 const EMPTY_FILTERS = { level: "", type: "", role: "", location: "", company: "" };
+const PAGE_SIZE = 8;
 
 export default function Jobs() {
   const [jobs, setJobs] = useState([]);
@@ -12,6 +14,7 @@ export default function Jobs() {
   const [error, setError] = useState(null);
   const [filters, setFilters] = useState(EMPTY_FILTERS);
   const [selectedId, setSelectedId] = useState(null);
+  const [page, setPage] = useState(1);
 
   useEffect(() => {
     setLoading(true);
@@ -42,25 +45,30 @@ export default function Jobs() {
     );
   }, [jobs, filters]);
 
-  // Keep the selected job valid whenever filters narrow the list down --
+  useEffect(() => setPage(1), [filters]);
+
+  const totalPages = Math.max(1, Math.ceil(filtered.length / PAGE_SIZE));
+  const visible = filtered.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE);
+
+  // Keep the selected job valid for whichever page is currently showing --
   // fall back to the first visible result, or clear the panel if none match.
   useEffect(() => {
-    if (filtered.length === 0) {
+    if (visible.length === 0) {
       setSelectedId(null);
       return;
     }
-    if (!filtered.some((j) => j._id === selectedId)) {
-      setSelectedId(filtered[0]._id);
+    if (!visible.some((j) => j._id === selectedId)) {
+      setSelectedId(visible[0]._id);
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [filtered]);
+  }, [visible]);
 
   function updateFilter(key, value) {
     setFilters((f) => ({ ...f, [key]: value }));
   }
 
   const activeFilterCount = Object.values(filters).filter(Boolean).length;
-  const selectedJob = filtered.find((j) => j._id === selectedId) || null;
+  const selectedJob = visible.find((j) => j._id === selectedId) || null;
 
   return (
     <div>
@@ -171,8 +179,8 @@ export default function Jobs() {
           <div className="row g-4">
             {/* ---- Left: filtered list ---- */}
             <div className="col-lg-4">
-              <div className="d-flex flex-column gap-2" style={{ maxHeight: "78vh", overflowY: "auto" }}>
-                {filtered.map((job) => {
+              <div className="d-flex flex-column gap-2" style={{ maxHeight: "68vh", overflowY: "auto" }}>
+                {visible.map((job) => {
                   const isActive = job._id === selectedId;
                   return (
                     <button
@@ -205,6 +213,7 @@ export default function Jobs() {
                   );
                 })}
               </div>
+              <Pagination page={page} totalPages={totalPages} onChange={setPage} />
             </div>
 
             {/* ---- Right: selected job details ---- */}
@@ -243,6 +252,7 @@ export default function Jobs() {
                         target="_blank"
                         rel="noopener noreferrer"
                         className="btn btn-warm btn-lg"
+                        onClick={() => api.trackJobClick(selectedJob._id)}
                       >
                         Apply on {selectedJob.company}'s site ↗
                       </a>

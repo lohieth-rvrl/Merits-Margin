@@ -42,6 +42,7 @@ export default function AdminOverview() {
     const drafts = articles.filter((a) => a.status === "draft");
     const totalViews = articles.reduce((sum, a) => sum + (a.views || 0), 0);
     const publishedJobs = jobs.filter((j) => j.status === "published");
+    const totalClicks = jobs.reduce((sum, j) => sum + (j.clicks || 0), 0);
     return {
       totalArticles: articles.length,
       published: published.length,
@@ -49,6 +50,7 @@ export default function AdminOverview() {
       totalViews,
       totalJobs: jobs.length,
       publishedJobs: publishedJobs.length,
+      totalClicks,
     };
   }, [articles, jobs]);
 
@@ -144,6 +146,9 @@ export default function AdminOverview() {
             </div>
             <div className="col-6 col-md-3">
               <Reveal><StatCard label="Live job listings" value={stats.publishedJobs} accent="var(--sage)" /></Reveal>
+            </div>
+            <div className="col-6 col-md-3">
+              <Reveal><StatCard label="Apply clicks" value={stats.totalClicks} accent="var(--honey-deep)" /></Reveal>
             </div>
           </div>
 

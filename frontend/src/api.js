@@ -90,4 +90,14 @@ export const api = {
       method: "DELETE",
       headers: authHeaders(),
     }).then(handle),
+
+  trackJobClick: (id) =>
+    fetch(`${API_URL}/jobs/${id}/click`, { method: "POST" }).catch(() => {}),
+
+  // ---- admin: export ----
+  exportAllData: () =>
+    fetch(`${API_URL}/export`, { headers: authHeaders() }).then((res) => {
+      if (!res.ok) throw new Error("Export failed.");
+      return res.blob();
+    }),
 };

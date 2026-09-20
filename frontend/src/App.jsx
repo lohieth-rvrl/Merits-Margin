@@ -1,3 +1,4 @@
+import { Suspense, lazy } from "react";
 import { Routes, Route } from "react-router-dom";
 import { AuthProvider } from "./context/AuthContext";
 import Navbar from "./components/Navbar";
@@ -15,11 +16,29 @@ import Terms from "./pages/Terms";
 import NotFound from "./pages/NotFound";
 
 import Login from "./pages/admin/Login";
-import AdminOverview from "./pages/admin/AdminOverview";
 import Dashboard from "./pages/admin/Dashboard";
 import ArticleForm from "./pages/admin/ArticleForm";
 import JobsDashboard from "./pages/admin/JobsDashboard";
 import JobForm from "./pages/admin/JobForm";
+
+// Recharts adds meaningful bundle size, and this page is admin-only, so it
+// only loads for whoever actually visits /admin instead of shipping to
+// every public page load.
+const AdminOverview = lazy(() => import("./pages/admin/AdminOverview"));
+
+function AdminOverviewLoader() {
+  return (
+    <Suspense
+      fallback={
+        <div className="container py-5 d-flex justify-content-center">
+          <div className="lr-spinner" />
+        </div>
+      }
+    >
+      <AdminOverview />
+    </Suspense>
+  );
+}
 
 export default function App() {
   return (
@@ -41,7 +60,7 @@ export default function App() {
             path="/admin"
             element={
               <ProtectedRoute>
-                <AdminOverview />
+                <AdminOverviewLoader />
               </ProtectedRoute>
             }
           />
