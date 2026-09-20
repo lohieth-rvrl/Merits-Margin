@@ -7,7 +7,15 @@
  *      remembering position in scripts/state.json).
  *   2. Calls the free Gemini API (Google AI Studio) to write a full article
  *      for that topic.
- *   3. Saves it as a DRAFT through the backend's normal API -- it never
+ *   3. Builds a cover image and one in-body image via Pollinations.ai (free,
+ *      no key needed -- these are just constructed image URLs, not files).
+ *   4. Optionally finds one related YouTube video via the YouTube Data API
+ *      (free, but needs its own separate API key -- skipped automatically
+ *      if you haven't set one up).
+ *   5. Appends a "Sources & further reading" section linking to a fixed,
+ *      hand-picked list of real, stable authoritative sites (never
+ *      model-generated, so it can never cite a fabricated or dead link).
+ *   6. Saves it as a DRAFT through the backend's normal API -- it never
  *      appears on the public site until you open the admin dashboard and
  *      publish it yourself.
  *
@@ -21,15 +29,20 @@
  *   SEED_ADMIN_EMAIL    Same admin login used by seed.js
  *   SEED_ADMIN_PASSWORD Same admin login used by seed.js
  *   GEMINI_MODEL        Optional. Defaults to a current free-tier model.
+ *   YOUTUBE_API_KEY     Optional. Free key from Google Cloud Console --
+ *                        see README for setup. Without it, the "Related
+ *                        video" section is simply skipped.
  */
 
 require("dotenv").config();
 const fs = require("fs");
 const path = require("path");
 const topics = require("./topics");
+const sources = require("./sources");
 
 const STATE_PATH = path.join(__dirname, "state.json");
 const GEMINI_API_KEY = process.env.GEMINI_API_KEY;
+const YOUTUBE_API_KEY = process.env.YOUTUBE_API_KEY || "";
 const API_URL = process.env.API_URL || "http://localhost:5000/api";
 const ADMIN_EMAIL = process.env.SEED_ADMIN_EMAIL;
 const ADMIN_PASSWORD = process.env.SEED_ADMIN_PASSWORD;
@@ -100,6 +113,46 @@ function parseModelReply(text) {
   }
 
   return { title, dek, body };
+}
+
+// ---------------------------------------------------------------- images (Pollinations.ai, free, no key)
+// These are just constructed URLs -- nothing is downloaded here. A visitor's
+// own browser fetches the image when they load the page.
+function buildImageUrl(promptText, width, height) {
+  const stylized = `${promptText}, flat editorial illustration, warm color palette, minimalist, no text, no watermark`;
+  return `https://image.pollinations.ai/prompt/${encodeURIComponent(stylized)}?width=${width}&height=${height}&nologo=true`;
+}
+
+// Places one in-body image right after the first "## heading" line, using
+// that heading's own text as the image prompt so it's actually relevant.
+function insertInlineImage(body) {
+  const match = body.match(/^##\s+(.+)$/m);
+  if (!match) return body;
+  const headingText = match[1].trim();
+  const insertAt = match.index + match[0].length;
+  const imageUrl = buildImageUrl(headingText, 900, 550);
+  const imageMd = `\n\n![${headingText}](${imageUrl})\n`;
+  return body.slice(0, insertAt) + imageMd + body.slice(insertAt);
+}
+
+// ---------------------------------------------------------------- related video (YouTube Data API, free, own key)
+async function findRelatedVideo(topic) {
+  if (!YOUTUBE_API_KEY) return null;
+  try {
+    const url = `https://www.googleapis.com/youtube/v3/search?part=snippet&type=video&maxResults=1&q=${encodeURIComponent(topic)}&key=${YOUTUBE_API_KEY}`;
+    const res = await fetch(url);
+    if (!res.ok) {
+      console.log(`   (Skipping video — YouTube API returned ${res.status})`);
+      return null;
+    }
+    const data = await res.json();
+    const item = data.items?.[0];
+    if (!item?.id?.videoId) return null;
+    return { videoId: item.id.videoId, title: item.snippet.title };
+  } catch (err) {
+    console.log(`   (Skipping video — ${err.message})`);
+    return null;
+  }
 }
 
 // ---------------------------------------------------------------- Gemini call
@@ -195,8 +248,31 @@ async function main() {
   console.log("🤖 Asking Gemini to write the article...");
   const generated = await generateArticle(topicEntry);
 
+  // Extract the TOC from the model's own headings before we add our own
+  // extra sections below, so it never mismatches.
   const toc = extractToc(generated.body);
-  const readTime = estimateReadTime(generated.body);
+
+  console.log("🖼️  Building cover + in-body images (Pollinations.ai)...");
+  const coverImage = buildImageUrl(topicEntry.topic, 1200, 800);
+  let body = insertInlineImage(generated.body);
+
+  console.log("🎬 Looking for a related video...");
+  const video = await findRelatedVideo(topicEntry.topic);
+  if (video) {
+    body += `\n\n## Related video\n\n<div class="lr-embed-wrapper"><iframe src="https://www.youtube.com/embed/${video.videoId}" allowfullscreen title="${video.title.replace(/"/g, "'")}"></iframe></div>\n`;
+    toc.push("Related video");
+    console.log(`   Found: "${video.title}"`);
+  } else if (!YOUTUBE_API_KEY) {
+    console.log("   (No YOUTUBE_API_KEY set — skipping. See README to add one, it's free.)");
+  }
+
+  const sourceList = sources[topicEntry.category] || [];
+  if (sourceList.length > 0) {
+    body += `\n\n## Sources & further reading\n\n${sourceList.map((s) => `- [${s.name}](${s.url})`).join("\n")}\n`;
+    toc.push("Sources & further reading");
+  }
+
+  const readTime = estimateReadTime(body);
   const dateSuffix = new Date().toISOString().slice(0, 10).replace(/-/g, "");
   const slug = `${slugify(generated.title)}-${dateSuffix}`;
 
@@ -216,8 +292,8 @@ async function main() {
     date: new Date().toISOString().slice(0, 10),
     toc,
     related,
-    body: generated.body,
-    coverImage: "", // intentionally left blank -- shows the site's generated category illustration
+    body,
+    coverImage,
     status: "draft",
   };
 
