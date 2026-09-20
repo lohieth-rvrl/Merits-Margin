@@ -1,0 +1,50 @@
+---
+layout: base.njk
+---
+{% set cat = site.categories[category] %}
+<section class="article-head">
+  <div class="wrap">
+    <span class="tag" style="color:var(--{{ cat.color }})">{{ cat.label }}</span>
+    <h1>{{ title }}</h1>
+    <p class="byline">{{ readTime }} · Published {{ date | dateDisplay }} · By the {{ site.siteName }} editorial team</p>
+  </div>
+</section>
+<section class="wrap">
+  <div class="article-body">
+    <article>
+      <p class="lede"><strong>{{ dek }}</strong></p>
+      <div class="ad-slot in-article"><!-- AdSense slot: in-article, top -->Ad slot &mdash; in-article (responsive)</div>
+
+      {{ content | safe }}
+
+      <div class="ad-slot in-article"><!-- AdSense slot: in-article, end of post -->Ad slot &mdash; in-article, end of post (responsive)</div>
+    </article>
+    <aside class="toc">
+      <h4>In this article</h4>
+      <ol>
+        {% for item in toc %}
+        <li><a href="#{{ item | slugify }}">{{ item }}</a></li>
+        {% endfor %}
+      </ol>
+      <div class="ad-slot sidebar"><!-- AdSense slot: sidebar -->Ad slot &mdash; sidebar (300×250)</div>
+    </aside>
+  </div>
+</section>
+<section class="related">
+  <div class="wrap">
+    <h2>Related reading</h2>
+    <div class="related-grid">
+      {% for relSlug in related %}
+        {% for item in collections.articles %}
+          {% if item.data.slug == relSlug %}
+          {% set rcat = site.categories[item.data.category] %}
+          <a href="{{ item.url }}">
+            <span class="tag" style="color:var(--{{ rcat.color }})">{{ rcat.label }}</span>
+            <h3>{{ item.data.title }}</h3>
+          </a>
+          {% endif %}
+        {% endfor %}
+      {% endfor %}
+    </div>
+  </div>
+</section>

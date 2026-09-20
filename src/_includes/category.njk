@@ -1,0 +1,27 @@
+---
+layout: base.njk
+---
+{% set cat = site.categories[category] %}
+<section class="section-head">
+  <div class="wrap">
+    <span class="kicker" style="color:var(--{{ cat.color }})">Section</span>
+    <h1>{{ cat.label }}</h1>
+    <p>{{ cat.desc }}</p>
+  </div>
+</section>
+<section class="article-list">
+  <div class="wrap">
+    {% for item in collections[category] %}
+    <a class="article-row" href="{{ item.url }}">
+      <span class="idx">{{ loop.index }}</span>
+      <span>
+        <span class="tag" style="color:var(--{{ cat.color }})">{{ cat.label }}</span>
+        <h3>{{ item.data.title }}</h3>
+        <p>{{ item.data.dek }}</p>
+        <span class="meta">{{ item.data.readTime }} · {{ item.data.date | dateDisplay }}</span>
+      </span>
+    </a>
+    {% endfor %}
+    <div class="ad-slot in-article"><!-- AdSense slot: category hub, in-feed -->Ad slot &mdash; in-feed (responsive)</div>
+  </div>
+</section>

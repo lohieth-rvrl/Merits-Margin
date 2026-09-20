@@ -1,0 +1,56 @@
+---
+layout: base.njk
+---
+{% set feature = collections.articles[0] %}
+{% set fcat = site.categories[feature.data.category] %}
+<section class="hero">
+  <div class="wrap hero-grid">
+    <div class="hero-feature">
+      <span class="kicker" style="color:var(--{{ fcat.color }})">{{ fcat.label }}</span>
+      <a class="cover" href="{{ feature.url }}">
+        <h1>{{ feature.data.title }}</h1>
+      </a>
+      <p class="dek">{{ feature.data.dek }}</p>
+      <p class="meta">{{ feature.data.readTime }} · Updated {{ feature.data.date | dateDisplay }}</p>
+    </div>
+    <div class="hero-list">
+      <h2>Also new this week</h2>
+      {% for item in collections.articles %}
+        {% if loop.index > 1 and loop.index < 7 %}
+        {% set c = site.categories[item.data.category] %}
+        <a class="mini-row" href="{{ item.url }}">
+          <span class="mini-num">{{ loop.index }}</span>
+          <span>
+            <span class="tag" style="color:var(--{{ c.color }})">{{ c.label }}</span>
+            <h3>{{ item.data.title }}</h3>
+          </span>
+        </a>
+        {% endif %}
+      {% endfor %}
+    </div>
+  </div>
+</section>
+
+<section class="pillars">
+  <div class="wrap">
+    <div class="pillars-head">
+      <h2>Where to start</h2>
+    </div>
+    <div class="pillar-grid">
+      {% for key, c in site.categories %}
+      <a class="pillar-card {{ c.color }}" href="/{{ key }}/">
+        <span class="mark">{{ c.mark }}</span>
+        <h3>{{ c.label }}</h3>
+        <p>{{ c.desc }}</p>
+        <span class="go">Read the section →</span>
+      </a>
+      {% endfor %}
+    </div>
+  </div>
+</section>
+
+<section>
+  <div class="wrap">
+    <div class="ad-slot leaderboard"><!-- AdSense slot: homepage leaderboard -->Ad slot &mdash; leaderboard (728×90)</div>
+  </div>
+</section>

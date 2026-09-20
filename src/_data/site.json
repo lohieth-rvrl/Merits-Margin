@@ -1,0 +1,10 @@
+{
+  "siteName": "Ledger & Route",
+  "tagline": "Money and career decisions, explained plainly.",
+  "domain": "yourdomain.com",
+  "categories": {
+    "finance": { "label": "Finance", "color": "finance", "mark": "F", "desc": "Budgeting, saving, credit, and investing basics explained without jargon." },
+    "career": { "label": "Career & Jobs", "color": "career", "mark": "C", "desc": "Resumes, negotiation, and job-market advice for people building a career." },
+    "news": { "label": "Money News", "color": "news", "mark": "N", "desc": "What's happening in the economy and job market -- and what it means for you." }
+  }
+}
