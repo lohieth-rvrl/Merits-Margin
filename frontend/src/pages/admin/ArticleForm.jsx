@@ -1,6 +1,10 @@
 import { useEffect, useRef, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
+import { Link } from "react-router-dom";
 import { api } from "../../api";
+import { useAuth } from "../../context/AuthContext";
+import { CATEGORIES } from "../../categories";
+import CoverImage from "../../components/CoverImage";
 import ArticleContent from "../../components/ArticleContent";
 
 const emptyForm = {
@@ -24,8 +28,6 @@ function slugify(text) {
     .replace(/\s+/g, "-");
 }
 
-// Resize + compress an uploaded image client-side so base64 documents in
-// MongoDB stay reasonably small, instead of storing multi-megabyte originals.
 function compressImage(file, maxWidth = 1200, quality = 0.8) {
   return new Promise((resolve, reject) => {
     const reader = new FileReader();
@@ -48,20 +50,34 @@ function compressImage(file, maxWidth = 1200, quality = 0.8) {
   });
 }
 
+function autoResize(el) {
+  if (!el) return;
+  el.style.height = "auto";
+  el.style.height = `${el.scrollHeight}px`;
+}
+
 export default function ArticleForm() {
   const { id } = useParams();
   const isEditing = !!id;
   const navigate = useNavigate();
+  const { email } = useAuth();
+
+  const titleRef = useRef(null);
+  const dekRef = useRef(null);
   const bodyRef = useRef(null);
 
   const [form, setForm] = useState(emptyForm);
+  const [lastStatus, setLastStatus] = useState("draft"); // reflects saved status, for the top-bar pill
   const [slugManuallyEdited, setSlugManuallyEdited] = useState(false);
   const [loading, setLoading] = useState(isEditing);
   const [saving, setSaving] = useState(null); // null | "draft" | "published"
   const [error, setError] = useState(null);
-  const [activeTab, setActiveTab] = useState("write");
-  const [uploadingCover, setUploadingCover] = useState(false);
-  const [uploadingInline, setUploadingInline] = useState(false);
+
+  const [showInsertMenu, setShowInsertMenu] = useState(false);
+  const [showSelectionToolbar, setShowSelectionToolbar] = useState(false);
+  const [showPublishModal, setShowPublishModal] = useState(false);
+  const [showPreview, setShowPreview] = useState(false);
+  const [uploadingImage, setUploadingImage] = useState(false);
 
   useEffect(() => {
     if (!isEditing) return;
@@ -80,11 +96,17 @@ export default function ArticleForm() {
           body: a.body,
           coverImage: a.coverImage || "",
         });
+        setLastStatus(a.status || "draft");
         setSlugManuallyEdited(true);
       })
       .catch((err) => setError(err.message))
       .finally(() => setLoading(false));
   }, [id, isEditing]);
+
+  // Auto-resize title/dek/body as content changes
+  useEffect(() => autoResize(titleRef.current), [form.title]);
+  useEffect(() => autoResize(dekRef.current), [form.dek]);
+  useEffect(() => autoResize(bodyRef.current), [form.body]);
 
   function update(field, value) {
     setForm((f) => {
@@ -99,14 +121,11 @@ export default function ArticleForm() {
   async function handleCoverUpload(e) {
     const file = e.target.files?.[0];
     if (!file) return;
-    setUploadingCover(true);
     try {
       const dataUrl = await compressImage(file, 1400, 0.82);
       update("coverImage", dataUrl);
     } catch {
       setError("Couldn't process that image — try a different file.");
-    } finally {
-      setUploadingCover(false);
     }
   }
 
@@ -123,38 +142,83 @@ export default function ArticleForm() {
       textarea.focus();
       const cursorPos = start + insertText.length;
       textarea.setSelectionRange(cursorPos, cursorPos);
+      autoResize(textarea);
     });
   }
 
-  function toolbarBold() {
-    insertAtCursor("**", true);
-  }
-  function toolbarItalic() {
-    insertAtCursor("_", true);
-  }
+  // Converts the current selection into a heading (keeping the selected
+  // words), instead of just dropping "## " in and deleting what was selected.
   function toolbarHeading() {
-    insertAtCursor("\n## Section heading\n");
-  }
-  function toolbarList() {
-    insertAtCursor("\n- List item\n- List item\n");
-  }
-  function toolbarLink() {
-    insertAtCursor("[link text](https://example.com)");
+    const textarea = bodyRef.current;
+    if (!textarea) return;
+    const start = textarea.selectionStart;
+    const end = textarea.selectionEnd;
+    const selected = form.body.slice(start, end) || "Heading";
+    const insertText = `\n\n## ${selected}\n\n`;
+    const newBody = form.body.slice(0, start) + insertText + form.body.slice(end);
+    update("body", newBody);
+    requestAnimationFrame(() => {
+      textarea.focus();
+      autoResize(textarea);
+    });
   }
 
-  async function toolbarImage(e) {
+  function toYouTubeEmbedUrl(url) {
+    try {
+      const u = new URL(url);
+      let videoId = null;
+      if (u.hostname.includes("youtu.be")) {
+        videoId = u.pathname.slice(1);
+      } else if (u.hostname.includes("youtube.com")) {
+        videoId = u.searchParams.get("v") || u.pathname.split("/embed/")[1];
+      }
+      return videoId ? `https://www.youtube.com/embed/${videoId}` : null;
+    } catch {
+      return null;
+    }
+  }
+
+  function handleInsertEmbed() {
+    const url = window.prompt("Paste a YouTube video URL to embed:");
+    if (!url) return;
+    const embedUrl = toYouTubeEmbedUrl(url.trim());
+    if (embedUrl) {
+      insertAtCursor(
+        `\n\n<div class="lr-embed-wrapper"><iframe src="${embedUrl}" allowfullscreen title="Embedded video"></iframe></div>\n\n`
+      );
+    } else {
+      // Non-YouTube links usually can't be embedded due to the source
+      // site's iframe restrictions, so fall back to a plain link.
+      insertAtCursor(`\n\n[Watch: ${url}](${url})\n\n`);
+    }
+    setShowInsertMenu(false);
+  }
+
+  function handleInsertCodeBlock() {
+    insertAtCursor("\n\n```\nyour code here\n```\n\n");
+    setShowInsertMenu(false);
+  }
+
+  async function handleInsertImage(e) {
     const file = e.target.files?.[0];
     if (!file) return;
-    setUploadingInline(true);
+    setUploadingImage(true);
     try {
-      const dataUrl = await compressImage(file, 1000, 0.78);
-      insertAtCursor(`\n![Describe this image](${dataUrl})\n`);
+      const dataUrl = await compressImage(file, 900, 0.78);
+      insertAtCursor(`\n\n![Describe this image](${dataUrl})\n\n`);
     } catch {
       setError("Couldn't process that image — try a different file.");
     } finally {
-      setUploadingInline(false);
+      setUploadingImage(false);
       e.target.value = "";
+      setShowInsertMenu(false);
     }
+  }
+
+  function handleBodySelect() {
+    const textarea = bodyRef.current;
+    if (!textarea) return;
+    setShowSelectionToolbar(textarea.selectionStart !== textarea.selectionEnd);
   }
 
   function buildPayload(status) {
@@ -174,6 +238,10 @@ export default function ArticleForm() {
   }
 
   async function handleSave(status) {
+    if (!form.title.trim() || !form.body.trim()) {
+      setError("Add a title and some body text before saving.");
+      return;
+    }
     setError(null);
     setSaving(status);
     const payload = buildPayload(status);
@@ -205,221 +273,279 @@ export default function ArticleForm() {
   };
 
   return (
-    <div className="container py-5" style={{ maxWidth: 920 }}>
-      <div className="d-flex justify-content-between align-items-start mb-3 flex-wrap gap-2">
-        <h1 className="h3 fw-bold mb-0">{isEditing ? "Edit article" : "New article"}</h1>
-        <div className="d-flex gap-2">
-          <button
-            className="btn btn-warm-outline"
-            type="button"
-            onClick={() => handleSave("draft")}
-            disabled={saving !== null}
-          >
-            {saving === "draft" ? "Saving…" : "Save as draft"}
-          </button>
-          <button
-            className="btn btn-warm"
-            type="button"
-            onClick={() => handleSave("published")}
-            disabled={saving !== null}
-          >
-            {saving === "published" ? "Publishing…" : "Publish"}
-          </button>
+    <div>
+      {/* ---------- TOP BAR ---------- */}
+      <div className="lr-editor-topbar py-2 sticky-top">
+        <div className="container d-flex align-items-center justify-content-between">
+          <div className="d-flex align-items-center gap-3">
+            <Link to="/admin" className="lr-editor-wordmark text-decoration-none">
+              Ledger &amp; Route
+            </Link>
+            <span className="lr-status-pill">{lastStatus === "published" ? "Published" : "Draft"}</span>
+          </div>
+          <div className="d-flex align-items-center gap-3">
+            {error && <span className="text-danger small d-none d-md-inline">{error}</span>}
+            <button className="lr-text-btn" type="button" onClick={() => setShowPreview((p) => !p)}>
+              {showPreview ? "Back to editing" : "Preview"}
+            </button>
+            <button
+              className="lr-text-btn"
+              type="button"
+              onClick={() => handleSave("draft")}
+              disabled={saving !== null}
+            >
+              {saving === "draft" ? "Saving…" : "Save draft"}
+            </button>
+            <button className="lr-publish-btn" type="button" onClick={() => setShowPublishModal(true)}>
+              Publish
+            </button>
+          </div>
         </div>
+        {error && <div className="container text-danger small d-md-none pt-1">{error}</div>}
       </div>
 
-      {error && <div className="alert alert-danger">{error}</div>}
-
-      <ul className="nav nav-tabs lr-editor-tabs mb-4">
-        <li className="nav-item">
-          <button
-            className={`nav-link ${activeTab === "write" ? "active" : ""}`}
-            onClick={() => setActiveTab("write")}
-            type="button"
-          >
-            Write
-          </button>
-        </li>
-        <li className="nav-item">
-          <button
-            className={`nav-link ${activeTab === "preview" ? "active" : ""}`}
-            onClick={() => setActiveTab("preview")}
-            type="button"
-          >
-            Preview
-          </button>
-        </li>
-      </ul>
-
-      {activeTab === "preview" ? (
-        <div className="border rounded-4 p-4 bg-white">
-          <ArticleContent article={previewArticle} related={[]} showAds={false} linkable={false} />
+      {showPreview ? (
+        <div className="container py-5">
+          <div className="lr-editor-canvas">
+            <ArticleContent article={previewArticle} related={[]} showAds={false} linkable={false} />
+          </div>
         </div>
       ) : (
-        <form onSubmit={(e) => e.preventDefault()}>
-          {/* Cover image */}
-          <div className="mb-4">
-            <label className="form-label fw-semibold">Cover image</label>
+        <div className="container py-5">
+          <div className="lr-editor-canvas">
+            {/* Cover image */}
             {form.coverImage ? (
-              <div className="position-relative" style={{ maxWidth: 420 }}>
-                <img
-                  src={form.coverImage}
-                  alt="Cover preview"
-                  className="rounded-4 w-100"
-                  style={{ aspectRatio: "16/9", objectFit: "cover" }}
-                />
-                <button
-                  type="button"
-                  className="btn btn-sm btn-dark position-absolute top-0 end-0 m-2"
-                  onClick={() => update("coverImage", "")}
-                >
-                  Remove
-                </button>
+              <div className="lr-cover-strip">
+                <img src={form.coverImage} alt="Cover" />
+                <div className="lr-cover-actions">
+                  <label className="lr-text-btn bg-white rounded-pill px-3 py-1 shadow-sm" style={{ cursor: "pointer" }}>
+                    Change
+                    <input type="file" accept="image/*" className="d-none" onChange={handleCoverUpload} />
+                  </label>
+                  <button
+                    className="lr-text-btn bg-white rounded-pill px-3 py-1 shadow-sm"
+                    type="button"
+                    onClick={() => update("coverImage", "")}
+                  >
+                    Remove
+                  </button>
+                </div>
               </div>
             ) : (
-              <label className="lr-dropzone d-flex flex-column align-items-center justify-content-center p-4 text-center" style={{ maxWidth: 420, minHeight: 140 }}>
-                {uploadingCover ? (
-                  <div className="lr-spinner" />
-                ) : (
-                  <>
-                    <div className="fw-semibold">Click to upload a cover image</div>
-                    <div className="text-secondary small">JPG or PNG — automatically resized</div>
-                  </>
-                )}
+              <label className="lr-add-cover-link">
+                🖼️ Add a cover image
                 <input type="file" accept="image/*" className="d-none" onChange={handleCoverUpload} />
               </label>
             )}
-            <div className="text-secondary small mt-2">
-              No image? The site shows a generated illustration matching the category instead.
-            </div>
-          </div>
 
-          <div className="mb-3">
-            <label className="form-label fw-semibold">Title</label>
-            <input
-              className="form-control"
+            {/* Title */}
+            <textarea
+              ref={titleRef}
+              className="lr-title-input"
+              placeholder="Title"
+              rows={1}
               value={form.title}
               onChange={(e) => update("title", e.target.value)}
-              required
             />
-          </div>
 
-          <div className="row">
-            <div className="col-md-8 mb-3">
-              <label className="form-label fw-semibold">
-                URL slug <span className="text-secondary fw-normal">(auto-filled — edit if you like)</span>
-              </label>
-              <input
-                className="form-control"
-                value={form.slug}
-                onChange={(e) => {
-                  setSlugManuallyEdited(true);
-                  update("slug", slugify(e.target.value));
-                }}
-                required
-              />
-            </div>
-            <div className="col-md-4 mb-3">
-              <label className="form-label fw-semibold">Category</label>
-              <select
-                className="form-select"
-                value={form.category}
-                onChange={(e) => update("category", e.target.value)}
-              >
-                <option value="finance">Finance</option>
-                <option value="career">Career & Jobs</option>
-                <option value="news">Money News</option>
-              </select>
-            </div>
-          </div>
-
-          <div className="row">
-            <div className="col-md-8 mb-3">
-              <label className="form-label fw-semibold">Publish date</label>
-              <input
-                type="date"
-                className="form-control"
-                value={form.date}
-                onChange={(e) => update("date", e.target.value)}
-                required
-              />
-            </div>
-            <div className="col-md-4 mb-3">
-              <label className="form-label fw-semibold">Read time</label>
-              <input
-                className="form-control"
-                value={form.readTime}
-                onChange={(e) => update("readTime", e.target.value)}
-                placeholder="6 min read"
-              />
-            </div>
-          </div>
-
-          <div className="mb-3">
-            <label className="form-label fw-semibold">Dek (one-sentence summary)</label>
+            {/* Dek / subtitle */}
             <textarea
-              className="form-control"
-              rows="2"
+              ref={dekRef}
+              className="lr-dek-input"
+              placeholder="Write a one-line summary…"
+              rows={1}
               value={form.dek}
               onChange={(e) => update("dek", e.target.value)}
-              required
             />
-          </div>
 
-          <div className="mb-3">
-            <label className="form-label fw-semibold">
-              Table of contents headings{" "}
-              <span className="text-secondary fw-normal">(one per line, must match ## headings below)</span>
-            </label>
-            <textarea
-              className="form-control"
-              rows="3"
-              value={form.toc}
-              onChange={(e) => update("toc", e.target.value)}
-              placeholder={"Start with your floor\nUse percentages, not fixed amounts"}
-            />
-          </div>
+            {/* Selection toolbar */}
+            {showSelectionToolbar && (
+              <div className="lr-selection-toolbar">
+                <button type="button" onClick={() => insertAtCursor("**", true)} title="Bold">
+                  <strong>B</strong>
+                </button>
+                <button type="button" onClick={() => insertAtCursor("_", true)} title="Italic">
+                  <em>I</em>
+                </button>
+                <button type="button" onClick={toolbarHeading} title="Heading">
+                  H2
+                </button>
+                <button
+                  type="button"
+                  onClick={() => insertAtCursor("[link text](https://example.com)")}
+                  title="Link"
+                >
+                  🔗
+                </button>
+              </div>
+            )}
 
-          <div className="mb-3">
-            <label className="form-label fw-semibold">
-              Related article slugs <span className="text-secondary fw-normal">(comma-separated)</span>
-            </label>
-            <input
-              className="form-control"
-              value={form.related}
-              onChange={(e) => update("related", e.target.value)}
-              placeholder="emergency-fund-how-much, budget-with-irregular-income"
-            />
-          </div>
+            {/* Body + plus menu */}
+            <div className="lr-body-row">
+              <button
+                className={`lr-plus-btn ${showInsertMenu ? "is-open" : ""}`}
+                type="button"
+                onClick={() => setShowInsertMenu((s) => !s)}
+                aria-label="Insert content"
+              >
+                +
+              </button>
 
-          <div className="mb-4">
-            <label className="form-label fw-semibold">Body (Markdown)</label>
-            <div className="d-flex flex-wrap gap-2 mb-2">
-              <button type="button" className="btn btn-sm btn-outline-secondary fw-bold" onClick={toolbarBold}>B</button>
-              <button type="button" className="btn btn-sm btn-outline-secondary fst-italic" onClick={toolbarItalic}>I</button>
-              <button type="button" className="btn btn-sm btn-outline-secondary" onClick={toolbarHeading}>H2</button>
-              <button type="button" className="btn btn-sm btn-outline-secondary" onClick={toolbarList}>• List</button>
-              <button type="button" className="btn btn-sm btn-outline-secondary" onClick={toolbarLink}>🔗 Link</button>
-              <label className="btn btn-sm btn-outline-secondary mb-0">
-                {uploadingInline ? "Uploading…" : "🖼️ Insert image"}
-                <input type="file" accept="image/*" className="d-none" onChange={toolbarImage} />
+              <div className="flex-grow-1">
+                {showInsertMenu && (
+                  <div className="lr-insert-menu mb-2">
+                    <label title="Insert image">
+                      {uploadingImage ? "…" : "🖼️"}
+                      <input type="file" accept="image/*" className="d-none" onChange={handleInsertImage} />
+                    </label>
+                    <button type="button" title="Divider" onClick={() => insertAtCursor("\n\n---\n\n")}>
+                      ─
+                    </button>
+                    <button
+                      type="button"
+                      title="Heading"
+                      onClick={() => insertAtCursor("\n\n## Section heading\n\n")}
+                    >
+                      H2
+                    </button>
+                    <button type="button" title="Quote" onClick={() => insertAtCursor("\n\n> Quote\n\n")}>
+                      ❝
+                    </button>
+                    <button
+                      type="button"
+                      title="Bulleted list"
+                      onClick={() => insertAtCursor("\n\n- List item\n- List item\n\n")}
+                    >
+                      •
+                    </button>
+                    <button type="button" title="Code block" onClick={handleInsertCodeBlock}>
+                      {"</>"}
+                    </button>
+                    <button type="button" title="Embed a video" onClick={handleInsertEmbed}>
+                      ▶
+                    </button>
+                  </div>
+                )}
+                <textarea
+                  ref={bodyRef}
+                  className="lr-body-textarea"
+                  placeholder="Tell your story…"
+                  value={form.body}
+                  onChange={(e) => update("body", e.target.value)}
+                  onSelect={handleBodySelect}
+                  onBlur={() => setTimeout(() => setShowSelectionToolbar(false), 150)}
+                />
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ---------- PUBLISH MODAL ---------- */}
+      {showPublishModal && (
+        <div className="lr-modal-backdrop" onClick={() => setShowPublishModal(false)}>
+          <div className="lr-modal" onClick={(e) => e.stopPropagation()}>
+            <h2 className="h4 mb-3">Story details</h2>
+
+            <div className="lr-modal-preview-card">
+              <CoverImage src={form.coverImage} category={form.category} alt={form.title} className="rounded-2" />
+              <div>
+                <div className="fw-semibold">{form.title || "Untitled story"}</div>
+                <div className="text-secondary small">{form.dek}</div>
+              </div>
+            </div>
+
+            <div className="row">
+              <div className="col-md-8 mb-3">
+                <label className="form-label fw-semibold">URL slug</label>
+                <input
+                  className="form-control"
+                  value={form.slug}
+                  onChange={(e) => {
+                    setSlugManuallyEdited(true);
+                    update("slug", slugify(e.target.value));
+                  }}
+                />
+              </div>
+              <div className="col-md-4 mb-3">
+                <label className="form-label fw-semibold">Category</label>
+                <select
+                  className="form-select"
+                  value={form.category}
+                  onChange={(e) => update("category", e.target.value)}
+                >
+                  {Object.entries(CATEGORIES).map(([key, c]) => (
+                    <option key={key} value={key}>
+                      {c.label}
+                    </option>
+                  ))}
+                </select>
+              </div>
+            </div>
+
+            <div className="row">
+              <div className="col-md-8 mb-3">
+                <label className="form-label fw-semibold">Publish date</label>
+                <input
+                  type="date"
+                  className="form-control"
+                  value={form.date}
+                  onChange={(e) => update("date", e.target.value)}
+                />
+              </div>
+              <div className="col-md-4 mb-3">
+                <label className="form-label fw-semibold">Read time</label>
+                <input
+                  className="form-control"
+                  value={form.readTime}
+                  onChange={(e) => update("readTime", e.target.value)}
+                />
+              </div>
+            </div>
+
+            <div className="mb-3">
+              <label className="form-label fw-semibold">
+                Table of contents <span className="text-secondary fw-normal">(one heading per line)</span>
               </label>
+              <textarea
+                className="form-control"
+                rows="3"
+                value={form.toc}
+                onChange={(e) => update("toc", e.target.value)}
+              />
             </div>
-            <textarea
-              ref={bodyRef}
-              className="form-control font-monospace"
-              rows="16"
-              value={form.body}
-              onChange={(e) => update("body", e.target.value)}
-              placeholder="## First section heading&#10;&#10;Write your paragraph here..."
-              required
-            />
-            <div className="text-secondary small mt-1">
-              Use <code>## Heading</code> for sections, <code>**bold**</code>, <code>_italic_</code>, and{" "}
-              <code>- item</code> for bulleted lists. Switch to the Preview tab anytime to see how it will look.
+
+            <div className="mb-4">
+              <label className="form-label fw-semibold">
+                Related article slugs <span className="text-secondary fw-normal">(comma-separated)</span>
+              </label>
+              <input
+                className="form-control"
+                value={form.related}
+                onChange={(e) => update("related", e.target.value)}
+              />
+            </div>
+
+            {error && <div className="alert alert-danger">{error}</div>}
+
+            <div className="d-flex justify-content-end gap-2">
+              <button className="lr-text-btn" type="button" onClick={() => setShowPublishModal(false)}>
+                Cancel
+              </button>
+              <button
+                className="lr-publish-btn"
+                type="button"
+                disabled={saving !== null}
+                onClick={async () => {
+                  await handleSave("published");
+                  setShowPublishModal(false);
+                }}
+              >
+                {saving === "published" ? "Publishing…" : "Publish now"}
+              </button>
             </div>
           </div>
-        </form>
+        </div>
       )}
     </div>
   );

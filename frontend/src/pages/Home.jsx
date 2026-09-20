@@ -5,6 +5,25 @@ import { CATEGORIES, formatDate } from "../categories";
 import AdSlot from "../components/AdSlot";
 import CoverImage from "../components/CoverImage";
 import Reveal from "../components/Reveal";
+import Newsletter from "../components/Newsletter";
+
+const VALUE_PROPS = [
+  {
+    title: "No jargon, no fluff",
+    body: "Every piece explains the reasoning, not just the rule — so you actually understand the decision.",
+    icon: "✎",
+  },
+  {
+    title: "Written to be used",
+    body: "Scripts, checklists, and numbers you can act on today, not vague encouragement.",
+    icon: "→",
+  },
+  {
+    title: "Independent, always",
+    body: "Ad-supported, never advertiser-influenced. We tell you what we'd tell a friend.",
+    icon: "◆",
+  },
+];
 
 export default function Home() {
   const [articles, setArticles] = useState([]);
@@ -36,10 +55,12 @@ export default function Home() {
   }
 
   const [feature, ...rest] = articles;
-  const recent = rest.slice(0, 5);
+  const editorsPicks = rest.slice(0, 3);
+  const moreRecent = rest.slice(3, 6);
 
   return (
     <div>
+      {/* ---------- HERO ---------- */}
       <section className="lr-hero py-5">
         <div className="container py-4">
           <div className="row g-5 align-items-center">
@@ -47,18 +68,23 @@ export default function Home() {
               <span className={`badge ${CATEGORIES[feature.category]?.badgeClass} mb-3`}>
                 {CATEGORIES[feature.category]?.label}
               </span>
-              <h1 className="display-5 fw-bold">
+              <h1 className="display-5 fw-bold mb-3">
                 <Link to={`/${feature.category}/${feature.slug}`} className="text-decoration-none text-dark">
                   {feature.title}
                 </Link>
               </h1>
               <p className="lead text-secondary">{feature.dek}</p>
-              <p className="text-secondary small">
+              <p className="text-secondary small mb-4">
                 {feature.readTime} · Updated {formatDate(feature.date)}
               </p>
-              <Link to={`/${feature.category}/${feature.slug}`} className="btn btn-warm mt-2">
-                Read the story
-              </Link>
+              <div className="d-flex gap-2 flex-wrap">
+                <Link to={`/${feature.category}/${feature.slug}`} className="btn btn-warm btn-lg">
+                  Read the story
+                </Link>
+                <Link to="/finance" className="btn btn-warm-outline btn-lg">
+                  Browse all topics
+                </Link>
+              </div>
             </div>
             <div className="col-lg-5 fade-in-up" style={{ animationDelay: "0.1s" }}>
               <div className="ratio ratio-4x3 rounded-4 overflow-hidden shadow-sm">
@@ -69,58 +95,152 @@ export default function Home() {
         </div>
       </section>
 
-      <div className="container py-5">
-        <Reveal as="h2" className="h5 text-uppercase text-secondary border-bottom pb-3 mb-3">
-          Also new this week
-        </Reveal>
-        <div className="row g-3 reveal-group">
-          {recent.map((a) => (
-            <div className="col-md-6 col-lg-4" key={a._id}>
-              <Reveal>
-                <Link to={`/${a.category}/${a.slug}`} className="text-decoration-none text-dark">
-                  <div className="lr-card h-100">
-                    <div className="ratio ratio-16x9">
-                      <CoverImage src={a.coverImage} category={a.category} alt={a.title} />
+      {/* ---------- VALUE PROPS ---------- */}
+      <section className="py-5" style={{ background: "white" }}>
+        <div className="container">
+          <div className="row g-4 reveal-group">
+            {VALUE_PROPS.map((v) => (
+              <div className="col-md-4" key={v.title}>
+                <Reveal className="h-100">
+                  <div className="h-100">
+                    <div
+                      className="d-inline-flex align-items-center justify-content-center rounded-circle mb-3"
+                      style={{
+                        width: 48,
+                        height: 48,
+                        background: "var(--ivory-dim)",
+                        color: "var(--rust)",
+                        fontSize: "1.25rem",
+                      }}
+                    >
+                      {v.icon}
                     </div>
-                    <div className="p-3">
-                      <span className={`badge ${CATEGORIES[a.category]?.badgeClass} mb-2`}>
-                        {CATEGORIES[a.category]?.label}
+                    <h3 className="h5">{v.title}</h3>
+                    <p className="text-secondary mb-0">{v.body}</p>
+                  </div>
+                </Reveal>
+              </div>
+            ))}
+          </div>
+        </div>
+      </section>
+
+      {/* ---------- EDITOR'S PICKS ---------- */}
+      {editorsPicks.length > 0 && (
+        <section className="py-5">
+          <div className="container">
+            <Reveal className="d-flex justify-content-between align-items-baseline mb-4 flex-wrap gap-2">
+              <h2 className="mb-0">Editor's picks</h2>
+              <Link to="/finance" className="text-decoration-none small fw-semibold">
+                See all articles →
+              </Link>
+            </Reveal>
+            <div className="row g-4 reveal-group">
+              {editorsPicks.map((a) => (
+                <div className="col-md-4" key={a._id}>
+                  <Reveal>
+                    <Link to={`/${a.category}/${a.slug}`} className="text-decoration-none text-dark">
+                      <div className="lr-card h-100">
+                        <div className="ratio ratio-4x3">
+                          <CoverImage src={a.coverImage} category={a.category} alt={a.title} />
+                        </div>
+                        <div className="p-3">
+                          <span className={`badge ${CATEGORIES[a.category]?.badgeClass} mb-2`}>
+                            {CATEGORIES[a.category]?.label}
+                          </span>
+                          <h3 className="h6 mb-1">{a.title}</h3>
+                          <p className="text-secondary small mb-0">{a.readTime}</p>
+                        </div>
+                      </div>
+                    </Link>
+                  </Reveal>
+                </div>
+              ))}
+            </div>
+          </div>
+        </section>
+      )}
+
+      {/* ---------- CATEGORY SPOTLIGHTS ---------- */}
+      <section className="py-5" style={{ background: "white" }}>
+        <div className="container">
+          <Reveal as="h2" className="mb-4">
+            Where to start
+          </Reveal>
+          <div className="row g-3 reveal-group">
+            {Object.entries(CATEGORIES).map(([key, c]) => (
+              <div className="col-md-4" key={key}>
+                <Reveal>
+                  <Link to={`/${key}`} className="text-decoration-none">
+                    <div
+                      className="lr-card h-100 p-4"
+                      style={{ borderTop: `4px solid ${c.color}` }}
+                    >
+                      <h3 className="h5" style={{ color: c.color }}>
+                        {c.label}
+                      </h3>
+                      <p className="text-secondary small mb-3">
+                        {key === "finance" && "Budgeting, saving, credit, and investing basics explained without jargon."}
+                        {key === "career" && "Resumes, negotiation, and job-market advice for building a career."}
+                        {key === "news" && "What's happening in the economy and job market — and what it means for you."}
+                      </p>
+                      <span className="fw-semibold small" style={{ color: c.color }}>
+                        Explore {c.label} →
                       </span>
-                      <div className="fw-semibold">{a.title}</div>
                     </div>
-                  </div>
-                </Link>
-              </Reveal>
-            </div>
-          ))}
+                  </Link>
+                </Reveal>
+              </div>
+            ))}
+          </div>
         </div>
+      </section>
 
-        <hr className="my-5" />
-
-        <Reveal as="h2" className="mb-4">
-          Where to start
-        </Reveal>
-        <div className="row g-3 reveal-group">
-          {Object.entries(CATEGORIES).map(([key, c]) => (
-            <div className="col-md-4" key={key}>
-              <Reveal>
-                <Link to={`/${key}`} className="text-decoration-none">
-                  <div className="lr-card h-100 p-4" style={{ borderTop: `4px solid ${c.color}` }}>
-                    <h3 className="h5" style={{ color: c.color }}>
-                      {c.label}
-                    </h3>
-                    <p className="text-secondary small mb-0">
-                      {key === "finance" && "Budgeting, saving, credit, and investing basics."}
-                      {key === "career" && "Resumes, negotiation, and job-market advice."}
-                      {key === "news" && "What's happening in the economy and job market."}
-                    </p>
-                  </div>
-                </Link>
-              </Reveal>
+      {/* ---------- MORE RECENT ---------- */}
+      {moreRecent.length > 0 && (
+        <section className="py-5">
+          <div className="container">
+            <Reveal as="h2" className="mb-4">
+              More recent stories
+            </Reveal>
+            <div className="row g-3 reveal-group">
+              {moreRecent.map((a) => (
+                <div className="col-md-4" key={a._id}>
+                  <Reveal>
+                    <Link to={`/${a.category}/${a.slug}`} className="text-decoration-none text-dark">
+                      <div className="d-flex gap-3 align-items-start">
+                        <div
+                          className="rounded-3 overflow-hidden flex-shrink-0"
+                          style={{ width: 88, height: 64 }}
+                        >
+                          <CoverImage src={a.coverImage} category={a.category} alt={a.title} className="w-100 h-100" />
+                        </div>
+                        <div>
+                          <span className={`badge ${CATEGORIES[a.category]?.badgeClass} mb-1`} style={{ fontSize: "0.65rem" }}>
+                            {CATEGORIES[a.category]?.label}
+                          </span>
+                          <div className="fw-semibold small">{a.title}</div>
+                        </div>
+                      </div>
+                    </Link>
+                  </Reveal>
+                </div>
+              ))}
             </div>
-          ))}
-        </div>
+          </div>
+        </section>
+      )}
 
+      {/* ---------- NEWSLETTER ---------- */}
+      <section className="py-5">
+        <div className="container">
+          <Reveal>
+            <Newsletter />
+          </Reveal>
+        </div>
+      </section>
+
+      <div className="container pb-5">
         <AdSlot label="Ad slot — leaderboard (728×90)" height={90} />
       </div>
     </div>

@@ -14,12 +14,13 @@ export function slugifyHeading(text) {
 
 export function renderArticleBody(body) {
   const renderer = new marked.Renderer();
-  renderer.heading = (text, level) => {
-    if (level === 2) {
+  renderer.heading = function ({ tokens, depth, text }) {
+    const html = this.parser.parseInline(tokens);
+    if (depth === 2) {
       const id = slugifyHeading(text);
-      return `<h2 id="${id}">${text}</h2>`;
+      return `<h2 id="${id}">${html}</h2>`;
     }
-    return `<h${level}>${text}</h${level}>`;
+    return `<h${depth}>${html}</h${depth}>`;
   };
   return marked.parse(body || "", { renderer });
 }
