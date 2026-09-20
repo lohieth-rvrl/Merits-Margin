@@ -49,6 +49,13 @@ export default function Dashboard() {
         </div>
       </div>
 
+      <div className="d-flex gap-3 mb-4 border-bottom">
+        <span className="pb-2 fw-bold" style={{ color: "var(--rust)", borderBottom: "2px solid var(--rust)" }}>
+          Articles
+        </span>
+        <Link to="/admin/jobs" className="lr-text-btn pb-2">Jobs</Link>
+      </div>
+
       {error && <div className="alert alert-danger">{error}</div>}
       {loading ? (
         <div className="d-flex justify-content-center py-5">

@@ -55,4 +55,39 @@ export const api = {
       method: "DELETE",
       headers: authHeaders(),
     }).then(handle),
+
+  // ---- jobs: public ----
+  getJobs: (filters = {}) => {
+    const params = new URLSearchParams(
+      Object.fromEntries(Object.entries(filters).filter(([, v]) => v))
+    ).toString();
+    return fetch(`${API_URL}/jobs${params ? `?${params}` : ""}`).then(handle);
+  },
+
+  // ---- jobs: admin ----
+  getAllJobsAdmin: () =>
+    fetch(`${API_URL}/jobs/all`, { headers: authHeaders() }).then(handle),
+
+  getJobById: (id) =>
+    fetch(`${API_URL}/jobs/admin/${id}`, { headers: authHeaders() }).then(handle),
+
+  createJob: (payload) =>
+    fetch(`${API_URL}/jobs`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json", ...authHeaders() },
+      body: JSON.stringify(payload),
+    }).then(handle),
+
+  updateJob: (id, payload) =>
+    fetch(`${API_URL}/jobs/${id}`, {
+      method: "PUT",
+      headers: { "Content-Type": "application/json", ...authHeaders() },
+      body: JSON.stringify(payload),
+    }).then(handle),
+
+  deleteJob: (id) =>
+    fetch(`${API_URL}/jobs/${id}`, {
+      method: "DELETE",
+      headers: authHeaders(),
+    }).then(handle),
 };

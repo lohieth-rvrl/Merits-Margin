@@ -7,7 +7,7 @@ export const CATEGORIES = {
     icon: "coin",
   },
   career: {
-    label: "Career & Jobs",
+    label: "Careers",
     badgeClass: "badge-career",
     color: "#B9822A",
     colorSoft: "#F7ECD6",

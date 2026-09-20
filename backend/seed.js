@@ -6,6 +6,7 @@ require("dotenv").config();
 const mongoose = require("mongoose");
 const Admin = require("./models/Admin");
 const Article = require("./models/Article");
+const Job = require("./models/Job");
 
 const articles = [
   {
@@ -215,6 +216,54 @@ Schedule control and, for people who can keep a full pipeline, a higher earnings
   },
 ];
 
+// These are PLACEHOLDER listings only, clearly labeled as such, so the demo
+// site never looks like it's presenting a fabricated job as a real vacancy.
+// Replace them with real postings (with a real applyUrl on the company's own
+// site) before this goes live -- see the admin dashboard's Jobs tab.
+const demoJobs = [
+  {
+    title: "[DEMO LISTING — replace before going live] Software Engineer",
+    company: "Example Co",
+    companyWebsite: "https://example.com",
+    applyUrl: "https://example.com/careers",
+    location: "Remote (US)",
+    locationType: "Remote",
+    type: "Full-time",
+    level: "Entry-level",
+    role: "Engineering",
+    description:
+      "This is a placeholder listing so you can see how the Jobs page looks and filters. Delete it and add real postings from actual companies' own career pages once you're ready to go live.",
+    postedDate: new Date(),
+    status: "draft", // stays hidden from the public site until you decide otherwise
+  },
+  {
+    title: "[DEMO LISTING — replace before going live] Marketing Coordinator",
+    company: "Example Co",
+    companyWebsite: "https://example.com",
+    applyUrl: "https://example.com/careers",
+    location: "New York, NY",
+    locationType: "On-site",
+    type: "Full-time",
+    level: "Entry-level",
+    role: "Marketing",
+    description: "Another placeholder listing, kept as a draft by default.",
+    postedDate: new Date(),
+    status: "draft",
+  },
+];
+
+async function seedJobs() {
+  let created = 0;
+  for (const j of demoJobs) {
+    const exists = await Job.findOne({ title: j.title, company: j.company });
+    if (!exists) {
+      await Job.create(j);
+      created++;
+    }
+  }
+  console.log(`Seeded ${created} new demo job listing(s), saved as drafts.`);
+}
+
 async function seed() {
   const uri = process.env.MONGODB_URI;
   if (!uri) {
@@ -252,6 +301,8 @@ async function seed() {
     }
   }
   console.log(`Seeded ${created} new article(s) (${articles.length - created} already existed).`);
+
+  await seedJobs();
 
   await mongoose.disconnect();
   process.exit(0);

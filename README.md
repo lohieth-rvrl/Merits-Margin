@@ -79,6 +79,17 @@ a bug.
    all unknown paths to `index.html` (Cloudflare Pages and Vercel both do
    this automatically for Vite projects by default).
 
+## The Careers page is a job board, not articles
+The `/career` page now shows real job listings instead of articles — each
+listing links directly to the hiring company's own careers page, never a
+third-party job board. Manage listings from **Admin → Jobs** (a separate tab
+from Articles). The seed script adds two listings for `Example Co`, both
+saved as **drafts** and clearly labeled `[DEMO LISTING]` — replace or delete
+them with real postings (and each posting's own real application link)
+before treating this as live. The 3 original career-advice articles (resume
+tips, salary negotiation, remote jobs) still exist and are viewable by their
+direct article link, they're just no longer listed on the Careers hub page.
+
 ## Before applying for AdSense
 - Replace the placeholder Privacy Policy text (`frontend/src/pages/Privacy.jsx`)
   with one generated for your setup (AdSense gives you a free generator once

@@ -32,7 +32,7 @@ export default function Navbar() {
             </li>
             <li className="nav-item">
               <NavLink className="nav-link" to="/career">
-                Career &amp; Jobs
+                Careers
               </NavLink>
             </li>
             <li className="nav-item">

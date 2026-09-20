@@ -181,7 +181,7 @@ export default function Home() {
                       </h3>
                       <p className="text-secondary small mb-3">
                         {key === "finance" && "Budgeting, saving, credit, and investing basics explained without jargon."}
-                        {key === "career" && "Resumes, negotiation, and job-market advice for building a career."}
+                        {key === "career" && "Real open roles, linking straight to each employer's own site."}
                         {key === "news" && "What's happening in the economy and job market — and what it means for you."}
                       </p>
                       <span className="fw-semibold small" style={{ color: c.color }}>
