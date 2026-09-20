@@ -3,6 +3,7 @@ import { Link } from "react-router-dom";
 import { api } from "../../api";
 import { useAuth } from "../../context/AuthContext";
 import { formatDate } from "../../categories";
+import AdminTabs from "../../components/AdminTabs";
 
 export default function JobsDashboard() {
   const { email, logout } = useAuth();
@@ -48,12 +49,7 @@ export default function JobsDashboard() {
         </div>
       </div>
 
-      <div className="d-flex gap-3 mb-4 border-bottom">
-        <Link to="/admin" className="lr-text-btn pb-2">Articles</Link>
-        <span className="pb-2 fw-bold" style={{ color: "var(--rust)", borderBottom: "2px solid var(--rust)" }}>
-          Jobs
-        </span>
-      </div>
+      <AdminTabs active="jobs" />
 
       {error && <div className="alert alert-danger">{error}</div>}
       {loading ? (

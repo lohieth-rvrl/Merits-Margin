@@ -15,6 +15,7 @@ import Terms from "./pages/Terms";
 import NotFound from "./pages/NotFound";
 
 import Login from "./pages/admin/Login";
+import AdminOverview from "./pages/admin/AdminOverview";
 import Dashboard from "./pages/admin/Dashboard";
 import ArticleForm from "./pages/admin/ArticleForm";
 import JobsDashboard from "./pages/admin/JobsDashboard";
@@ -38,6 +39,14 @@ export default function App() {
           <Route path="/admin/login" element={<Login />} />
           <Route
             path="/admin"
+            element={
+              <ProtectedRoute>
+                <AdminOverview />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/admin/articles"
             element={
               <ProtectedRoute>
                 <Dashboard />

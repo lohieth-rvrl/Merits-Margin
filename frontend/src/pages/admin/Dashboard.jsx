@@ -4,6 +4,7 @@ import { api } from "../../api";
 import { useAuth } from "../../context/AuthContext";
 import { CATEGORIES, formatDate } from "../../categories";
 import CoverImage from "../../components/CoverImage";
+import AdminTabs from "../../components/AdminTabs";
 
 export default function Dashboard() {
   const { email, logout } = useAuth();
@@ -49,12 +50,7 @@ export default function Dashboard() {
         </div>
       </div>
 
-      <div className="d-flex gap-3 mb-4 border-bottom">
-        <span className="pb-2 fw-bold" style={{ color: "var(--rust)", borderBottom: "2px solid var(--rust)" }}>
-          Articles
-        </span>
-        <Link to="/admin/jobs" className="lr-text-btn pb-2">Jobs</Link>
-      </div>
+      <AdminTabs active="articles" />
 
       {error && <div className="alert alert-danger">{error}</div>}
       {loading ? (
@@ -81,7 +77,7 @@ export default function Dashboard() {
                     </span>
                   </div>
                   <div className="fw-semibold">{a.title}</div>
-                  <div className="text-secondary small">{formatDate(a.date)}</div>
+                  <div className="text-secondary small">{formatDate(a.date)} · {(a.views || 0).toLocaleString()} views</div>
                 </div>
                 <div className="d-flex gap-2">
                   <Link to={`/admin/edit/${a._id}`} className="btn btn-sm btn-warm-outline">

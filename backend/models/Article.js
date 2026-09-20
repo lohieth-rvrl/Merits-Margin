@@ -17,6 +17,7 @@ const ArticleSchema = new mongoose.Schema(
     related: { type: [String], default: [] }, // slugs of other articles
     coverImage: { type: String, default: "" }, // data URL or hosted image URL
     status: { type: String, enum: ["draft", "published"], default: "published" },
+    views: { type: Number, default: 0 },
   },
   { timestamps: true }
 );

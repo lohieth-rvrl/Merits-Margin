@@ -34,7 +34,11 @@ router.get("/all", requireAdmin, async (req, res) => {
 // GET /api/articles/slug/:slug   -> single published article by slug
 router.get("/slug/:slug", async (req, res) => {
   try {
-    const article = await Article.findOne({ slug: req.params.slug, status: "published" });
+    const article = await Article.findOneAndUpdate(
+      { slug: req.params.slug, status: "published" },
+      { $inc: { views: 1 } },
+      { new: true }
+    );
     if (!article) return res.status(404).json({ error: "Article not found." });
     res.json(article);
   } catch (err) {

@@ -251,7 +251,7 @@ export default function ArticleForm() {
       } else {
         await api.createArticle(payload);
       }
-      navigate("/admin");
+      navigate("/admin/articles");
     } catch (err) {
       setError(err.message);
     } finally {
@@ -278,7 +278,7 @@ export default function ArticleForm() {
       <div className="lr-editor-topbar py-2 sticky-top">
         <div className="container d-flex align-items-center justify-content-between">
           <div className="d-flex align-items-center gap-3">
-            <Link to="/admin" className="lr-editor-wordmark text-decoration-none">
+            <Link to="/admin/articles" className="lr-editor-wordmark text-decoration-none">
               Ledger &amp; Route
             </Link>
             <span className="lr-status-pill">{lastStatus === "published" ? "Published" : "Draft"}</span>
