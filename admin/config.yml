@@ -1,0 +1,88 @@
+backend:
+  name: git-gateway
+  branch: main
+
+# Netlify Identity + Git Gateway handles login for you -- no separate
+# server needed. See the setup steps in the README for the one-time
+# Netlify configuration this depends on.
+
+publish_mode: simple
+media_folder: "src/assets/img"
+public_folder: "/assets/img"
+
+collections:
+  - name: "articles"
+    label: "Articles"
+    label_singular: "Article"
+    folder: "src/articles"
+    create: true
+    slug: "{{fields.slug}}"
+    extension: "md"
+    format: "frontmatter"
+    identifier_field: title
+    summary: "{{title}} — {{category}}"
+    sortable_fields: ["date", "title", "category"]
+    fields:
+      - { label: "Title", name: "title", widget: "string" }
+      - label: "Category"
+        name: "category"
+        widget: "select"
+        options:
+          - { label: "Finance", value: "finance" }
+          - { label: "Career & Jobs", value: "career" }
+          - { label: "Money News", value: "news" }
+      - label: "Section (leave same as Category)"
+        name: "section"
+        widget: "select"
+        options:
+          - { label: "Finance", value: "finance" }
+          - { label: "Career & Jobs", value: "career" }
+          - { label: "Money News", value: "news" }
+      - label: "URL slug (lowercase, hyphens, no spaces)"
+        name: "slug"
+        widget: "string"
+        hint: "This becomes part of the article's web address. Example: budget-with-irregular-income"
+      - { label: "Publish date", name: "date", widget: "datetime" }
+      - label: "Read time"
+        name: "readTime"
+        widget: "string"
+        default: "6 min read"
+        hint: "Rough estimate shown to readers, e.g. '6 min read'"
+      - label: "Dek (one-sentence summary shown on homepage/category pages)"
+        name: "dek"
+        widget: "text"
+      - label: "Table of contents headings"
+        name: "toc"
+        widget: "list"
+        hint: "List each section heading exactly as it appears as an ## heading in the body below, in order."
+      - label: "Related article slugs"
+        name: "related"
+        widget: "list"
+        hint: "Up to 3 slugs of other existing articles to show as 'Related reading' at the bottom."
+      - label: "Permalink (leave exactly as-is)"
+        name: "permalink"
+        widget: "hidden"
+        default: "/{{ category }}/{{ slug }}/"
+      - label: "Article body"
+        name: "body"
+        widget: "markdown"
+        hint: "Use ## for each section heading -- these must match the Table of Contents headings above exactly."
+
+  - name: "pages"
+    label: "Static Pages"
+    label_singular: "Page"
+    files:
+      - label: "About"
+        name: "about"
+        file: "src/about/index.md"
+        fields:
+          - { label: "Title", name: "title", widget: "string" }
+          - { label: "Description", name: "description", widget: "string" }
+          - { label: "Body (HTML)", name: "body", widget: "markdown" }
+      - label: "Contact"
+        name: "contact"
+        file: "src/contact/index.md"
+        fields:
+          - { label: "Title", name: "title", widget: "string" }
+          - { label: "Description", name: "description", widget: "string" }
+          - { label: "Body (HTML)", name: "body", widget: "markdown" }
