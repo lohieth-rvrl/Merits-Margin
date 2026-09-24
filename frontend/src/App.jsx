@@ -1,0 +1,130 @@
+import { Suspense, lazy } from "react";
+import { Routes, Route } from "react-router-dom";
+import { AuthProvider } from "./context/AuthContext";
+import { ConsentProvider, AdSenseLoader } from "./context/ConsentContext";
+import Navbar from "./components/Navbar";
+import Footer from "./components/Footer";
+import CookieConsent from "./components/CookieConsent";
+import ProtectedRoute from "./components/ProtectedRoute";
+
+import Home from "./pages/Home";
+import Category from "./pages/Category";
+import Article from "./pages/Article";
+import Jobs from "./pages/Jobs";
+import SearchResults from "./pages/SearchResults";
+import About from "./pages/About";
+import Contact from "./pages/Contact";
+import Privacy from "./pages/Privacy";
+import Terms from "./pages/Terms";
+import NotFound from "./pages/NotFound";
+
+import Login from "./pages/admin/Login";
+import Dashboard from "./pages/admin/Dashboard";
+import ArticleForm from "./pages/admin/ArticleForm";
+import JobsDashboard from "./pages/admin/JobsDashboard";
+import JobForm from "./pages/admin/JobForm";
+
+// Recharts adds meaningful bundle size, and this page is admin-only, so it
+// only loads for whoever actually visits /admin instead of shipping to
+// every public page load.
+const AdminOverview = lazy(() => import("./pages/admin/AdminOverview"));
+
+function AdminOverviewLoader() {
+  return (
+    <Suspense
+      fallback={
+        <div className="container py-5 d-flex justify-content-center">
+          <div className="lr-spinner" />
+        </div>
+      }
+    >
+      <AdminOverview />
+    </Suspense>
+  );
+}
+
+export default function App() {
+  return (
+    <AuthProvider>
+      <ConsentProvider>
+        <AdSenseLoader />
+        <Navbar />
+        <main>
+          <Routes>
+          <Route path="/" element={<Home />} />
+          <Route path="/career" element={<Jobs />} />
+          <Route path="/search" element={<SearchResults />} />
+          <Route path="/:category" element={<Category />} />
+          <Route path="/:category/:slug" element={<Article />} />
+          <Route path="/about" element={<About />} />
+          <Route path="/contact" element={<Contact />} />
+          <Route path="/privacy" element={<Privacy />} />
+          <Route path="/terms" element={<Terms />} />
+
+          <Route path="/admin/login" element={<Login />} />
+          <Route
+            path="/admin"
+            element={
+              <ProtectedRoute>
+                <AdminOverviewLoader />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/admin/articles"
+            element={
+              <ProtectedRoute>
+                <Dashboard />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/admin/new"
+            element={
+              <ProtectedRoute>
+                <ArticleForm />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/admin/edit/:id"
+            element={
+              <ProtectedRoute>
+                <ArticleForm />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/admin/jobs"
+            element={
+              <ProtectedRoute>
+                <JobsDashboard />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/admin/jobs/new"
+            element={
+              <ProtectedRoute>
+                <JobForm />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/admin/jobs/edit/:id"
+            element={
+              <ProtectedRoute>
+                <JobForm />
+              </ProtectedRoute>
+            }
+          />
+
+          <Route path="*" element={<NotFound />} />
+          </Routes>
+        </main>
+        <Footer />
+        <CookieConsent />
+      </ConsentProvider>
+    </AuthProvider>
+  );
+}

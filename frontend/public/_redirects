@@ -1,0 +1,4 @@
+# Proxies /sitemap.xml on your real domain through to the backend, since the
+# sitemap needs live database data and can't be a static file in this SPA.
+# Update the backend URL below to match your actual deployed backend.
+/sitemap.xml  https://your-backend.onrender.com/sitemap.xml  200
