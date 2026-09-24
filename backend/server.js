@@ -22,7 +22,7 @@ app.use(helmet());
 // left open in production by accident.
 const FRONTEND_URL = process.env.FRONTEND_URL;
 if (FRONTEND_URL) {
-  app.use(cors({ origin: FRONTEND_URL }));
+  app.use(cors({ origin: FRONTEND_URL, credentials: true }));
 } else {
   console.warn(
     "⚠️  FRONTEND_URL is not set — CORS is allowing all origins. Set FRONTEND_URL in .env before deploying to production."
